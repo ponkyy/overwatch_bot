@@ -8,8 +8,8 @@ class Comp:
 
     t1: list
     t2: list
-    avg_1: float
-    avg_2: float
+
+    stats: dict
 
     def __init__(self, comp: list, players: dict):
         self.t1 = comp[:5]
@@ -19,22 +19,43 @@ class Comp:
     def _get_avgs(self, players):
         with open("ranks.json", "r") as f:
             ranks = json.load(f)
+        self.stats = {}
 
-        self.avg_1 = sum([
-            int(ranks[players[self.t1[0]]["tank"]]),
+        self.team_avg_1 = sum([
+            int(ranks[players[self.t1[0]]["tank"]]) * 1.1,
             int(ranks[players[self.t1[1]]["damage"]]),
             int(ranks[players[self.t1[2]]["damage"]]),
             int(ranks[players[self.t1[3]]["support"]]),
             int(ranks[players[self.t1[4]]["support"]])
         ]) / 5
-        self.avg_2 = sum([
-            int(ranks[players[self.t2[0]]["tank"]]),
+
+        self.team_avg_2 = sum([
+            int(ranks[players[self.t2[0]]["tank"]]) * 1.1,
             int(ranks[players[self.t2[1]]["damage"]]),
             int(ranks[players[self.t2[2]]["damage"]]),
             int(ranks[players[self.t2[3]]["support"]]),
             int(ranks[players[self.t2[4]]["support"]])
         ]) / 5
-        self.avg = list(ranks.keys())[list(ranks.values()).index(str(round(self.avg_1)))]
+
+        self.stats['total_avg_diff'] = abs(self.team_avg_1 - self.team_avg_2)
+
+        self.stats['tank_diff'] = abs(int(ranks[players[self.t1[0]]["tank"]]) -
+                                      int(ranks[players[self.t2[0]]["tank"]]))
+
+        self.stats['damage_diff'] = abs(
+            (int(ranks[players[self.t1[1]]["damage"]]) +
+             int(ranks[players[self.t1[2]]["damage"]])) / 2 -
+            (int(ranks[players[self.t2[1]]["damage"]]) +
+             int(ranks[players[self.t2[2]]["damage"]])) / 2)
+
+        self.stats['support_diff'] = abs(
+            (int(ranks[players[self.t1[3]]["support"]]) +
+             int(ranks[players[self.t1[4]]["support"]])) / 2
+            - (int(ranks[players[self.t2[3]]["support"]]) +
+               int(ranks[players[self.t2[4]]["support"]])) / 2)
+
+        #self.avg = list(ranks.keys())[
+        #list(ranks.values()).index(str(round(self.avg_1)))]
 
 
 class Overwatch2(commands.Cog):
@@ -61,13 +82,13 @@ class Overwatch2(commands.Cog):
         msg = self._alg()
         await ctx.send(msg)
 
-
-    def _alg(self):
+    def _alg(self) -> str:
         p = list(self.players.keys())
         while True:
             random.shuffle(p)
             curr = Comp(p, self.players)
-            if curr.avg_1 == curr.avg_2:
+            if curr.stats['total_avg_diff'] < 0.2 and curr.stats['tank_diff'] <= 5 and \
+                    curr.stats['damage_diff'] <= 8 and curr.stats['support_diff'] <= 8:
                 break
 
         roles = ["Tank", "Damage", "Damage", "Support", "Support"]
@@ -84,13 +105,18 @@ class Overwatch2(commands.Cog):
 
         team_1 = "\n\t\t".join(team_1)
         team_2 = "\n\t\t".join(team_2)
-        msg = f"**__Match Average__: {curr.avg}**\n\n**Team 1:**\n\t\t{team_1} \n**Team 2:**\n\t\t{team_2}\n"
+        msg = f"**__Match Average__: N/A**\n\n" \
+              f"**Team 1:**\n\t\t{team_1}\n" \
+              f"**Team 2:**\n\t\t{team_2}\n\n" \
+              f"Tank difference: {curr.stats['tank_diff']}\n" \
+              f"Damage difference: {curr.stats['damage_diff']}\n" \
+              f"Support difference: {curr.stats['support_diff']}\n" \
+              f"**__Total team difference__**: {curr.stats['total_avg_diff']:.3f}"
         return msg
 
 
 async def setup(client):
     await client.add_cog(Overwatch2(client))
-
 
 
 '''import json
@@ -157,7 +183,6 @@ def display(players):
         damage = d["damage"]
         support = d["support"]
         print(f"{name}:\n\tTank: {tank}\n\tDamage: {damage}\n\tSupport: {support}")'''
-
 
 '''def main():
 
