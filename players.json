@@ -1,0 +1,52 @@
+{
+  "ProteinCake": {
+    "tank": "Diamond 1",
+    "damage": "Diamond 2",
+    "support": "Diamond 2"
+  },
+  "BinkPlayz": {
+    "tank": "Master 5",
+    "damage": "Platinum 2",
+    "support": "Master 5"
+  },
+  "ponky": {
+    "tank": "Diamond 5",
+    "damage": "Diamond 4",
+    "support": "Diamond 4"
+  },
+  "trk20": {
+    "tank": "Platinum 5",
+    "damage": "Platinum 3",
+    "support": "Diamond 5"
+  },
+  "JCadoo": {
+    "tank": "Platinum 3",
+    "damage": "Platinum 5",
+    "support": "Platinum 4"
+  },
+  "FlapJacks": {
+    "tank": "Gold 3",
+    "damage": "Platinum 2",
+    "support": "Platinum 2"
+  },
+  "Rowley": {
+    "tank": "Diamond 5",
+    "damage": "Platinum 4",
+    "support": "Gold 4"
+  },
+  "DirectVortex": {
+    "tank": "Gold 1",
+    "damage": "Platinum 5",
+    "support": "Gold 3"
+  },
+  "JulianDotCom": {
+    "tank": "Gold 3",
+    "damage": "Silver 1",
+    "support": "Gold 2"
+  },
+  "twinaces": {
+    "tank": "Silver 3",
+    "damage": "Silver 4",
+    "support": "Silver 2"
+  }
+}
