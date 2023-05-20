@@ -41,14 +41,14 @@ class Overwatch2(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.role_emojis = {
-            "Bronze": "<:Bronze:230382770046763008>",
-            "Silver": "<:Silver:230382791957676033>",
-            "Gold": "<:Gold:230382810811203584>",
-            "Platinum": "<:Platinum:230382825914892289>",
-            "Diamond": "<:Diamond:230382847213568003>",
-            "Master": "<:Master:230383824771612674>",
-            "Grandmaster": "<:Grandmaster:230383862604234752>",
-            "Top 500": "<:Top500:230383895302897664>",
+            "Bronze": "<:Bronze:1109603963424215060>",
+            "Silver": "<:Silver:1109603962128171128>",
+            "Gold": "<:Gold:1109603960333013083>",
+            "Platinum": "<:Platinum:1109603959137644695>",
+            "Diamond": "<:Diamond:1109604516757770281>",
+            "Master": "<:Master:1109603953886380174>",
+            "Grandmaster": "<:Grandmaster:1109604769963716688>",
+            "Top 500": "<:Top500:1109604938297905293>",
         }
         with open("players.json", 'r') as f:
             self.players = json.load(f)
@@ -71,8 +71,19 @@ class Overwatch2(commands.Cog):
                 break
 
         roles = ["Tank", "Damage", "Damage", "Support", "Support"]
-        team_1 = "\n\t\t".join([f"__{roles[i]}__: {curr.t1[i]}" for i in range(5)])
-        team_2 = "\n\t\t".join([f"__{roles[i]}__: {curr.t2[i]}" for i in range(5)])
+
+        team_1, team_2 = [], []
+        for i in range(5):
+            r = roles[i]
+            c1 = curr.t1[i]
+            c2 = curr.t2[i]
+            e1 = self.role_emojis[self.players[c1][r.lower()][:-2]] # does not work for Top 500
+            e2 = self.role_emojis[self.players[c2][r.lower()][:-2]]
+            team_1.append(f"__{r}__: {c1} {e1}")
+            team_2.append(f"__{r}__: {c2} {e2}")
+
+        team_1 = "\n\t\t".join(team_1)
+        team_2 = "\n\t\t".join(team_2)
         msg = f"**__Match Average__: {curr.avg}**\n\n**Team 1:**\n\t\t{team_1} \n**Team 2:**\n\t\t{team_2}\n"
         return msg
 
