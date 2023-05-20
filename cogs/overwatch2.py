@@ -8,8 +8,8 @@ class Comp:
 
     t1: list
     t2: list
-    avg_1: float
-    avg_2: float
+
+    stats: dict
 
     def __init__(self, comp: list, players: dict):
         self.t1 = comp[:5]
@@ -20,20 +20,30 @@ class Comp:
         with open("ranks.json", "r") as f:
             ranks = json.load(f)
 
-        self.avg_1 = sum([
-            int(ranks[players[self.t1[0]]["tank"]]),
+        self.stats['total_avg_diff'] = abs(sum([
+            int(ranks[players[self.t1[0]]["tank"]]) * 1.1,
             int(ranks[players[self.t1[1]]["damage"]]),
             int(ranks[players[self.t1[2]]["damage"]]),
             int(ranks[players[self.t1[3]]["support"]]),
             int(ranks[players[self.t1[4]]["support"]])
-        ]) / 5
-        self.avg_2 = sum([
-            int(ranks[players[self.t2[0]]["tank"]]),
+        ]) / 5 - sum([
+            int(ranks[players[self.t2[0]]["tank"]]) * 1.1,
             int(ranks[players[self.t2[1]]["damage"]]),
             int(ranks[players[self.t2[2]]["damage"]]),
             int(ranks[players[self.t2[3]]["support"]]),
             int(ranks[players[self.t2[4]]["support"]])
-        ]) / 5
+        ]) / 5)
+
+        self.stats['tank_diff'] = abs(int(ranks[players[self.t1[0]]["tank"]]) - int(ranks[players[self.t2[0]]["tank"]]))
+
+        self.stats['damage_diff'] = abs(
+            (int(ranks[players[self.t1[1]]["damage"]]) + int(ranks[players[self.t1[2]]["damage"]])) / 2
+            - (int(ranks[players[self.t2[1]]["damage"]]) + int(ranks[players[self.t2[2]]["damage"]])) / 2)
+
+        self.stats['support_diff'] = abs(
+            (int(ranks[players[self.t1[3]]["support"]]) + int(ranks[players[self.t1[4]]["support"]])) / 2
+            - (int(ranks[players[self.t2[3]]["support"]]) + int(ranks[players[self.t2[4]]["support"]])) / 2)
+
         self.avg = list(ranks.keys())[list(ranks.values()).index(str(round(self.avg_1)))]
 
 
@@ -61,13 +71,13 @@ class Overwatch2(commands.Cog):
         msg = self._alg()
         await ctx.send(msg)
 
-
-    def _alg(self):
+    def _alg(self) -> str:
         p = list(self.players.keys())
         while True:
             random.shuffle(p)
             curr = Comp(p, self.players)
-            if curr.avg_1 == curr.avg_2:
+            if curr.stats['total_avg_diff'] < 0.2 and curr.stats['tank_diff'] <= 5 and \
+                    curr.stats['damage_diff'] <= 8 and curr.stats['support_diff'] <= 8:
                 break
 
         roles = ["Tank", "Damage", "Damage", "Support", "Support"]
@@ -79,7 +89,6 @@ class Overwatch2(commands.Cog):
 
 async def setup(client):
     await client.add_cog(Overwatch2(client))
-
 
 
 '''import json
@@ -146,7 +155,6 @@ def display(players):
         damage = d["damage"]
         support = d["support"]
         print(f"{name}:\n\tTank: {tank}\n\tDamage: {damage}\n\tSupport: {support}")'''
-
 
 '''def main():
 
