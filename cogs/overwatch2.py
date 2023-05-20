@@ -34,29 +34,22 @@ class Comp:
             int(ranks[players[self.t2[3]]["support"]]),
             int(ranks[players[self.t2[4]]["support"]])
         ]) / 5
-        self.avg = list(ranks.keys())[list(ranks.values()).index(2)]
-
-
-def alg(players):
-    p = list(players.keys())
-    while True:
-        random.shuffle(p)
-        curr = Comp(p, players)
-        if curr.avg_1 == curr.avg_2:
-            break
-
-    roles = ["Tank", "Damage", "Damage", "Support", "Support"]
-    team_1 = "\n\t\t".join([f"*{roles[i]}*: {curr.t1[i]}" for i in range(5)])
-    team_2 = "\n\t\t".join([f"*{roles[i]}*: {curr.t2[i]}" for i in range(5)])
-    #msg = f"**Team 1: \t({curr.avg_1} avg)**\n\t\t{team_1} \n**Team 2: \t({curr.avg_2} avg)**\n\t\t{team_2}\n"
-    msg = f"**__Match Average__: {curr.avg}**\n\n**Team 1:**\n\t\t{team_1} \n**Team 2:**\n\t\t{team_2}\n"
-    #print(msg)
-    return msg
+        self.avg = list(ranks.keys())[list(ranks.values()).index(str(round(self.avg_1)))]
 
 
 class Overwatch2(commands.Cog):
     def __init__(self, client):
         self.client = client
+        self.role_emojis = {
+            "Bronze": "<:Bronze:230382770046763008>",
+            "Silver": "<:Silver:230382791957676033>",
+            "Gold": "<:Gold:230382810811203584>",
+            "Platinum": "<:Platinum:230382825914892289>",
+            "Diamond": "<:Diamond:230382847213568003>",
+            "Master": "<:Master:230383824771612674>",
+            "Grandmaster": "<:Grandmaster:230383862604234752>",
+            "Top 500": "<:Top500:230383895302897664>",
+        }
         with open("players.json", 'r') as f:
             self.players = json.load(f)
         '''with open("ranks.json", 'r') as f:
@@ -65,8 +58,23 @@ class Overwatch2(commands.Cog):
     @commands.has_permissions(administrator=True)
     @commands.command()
     async def overwatch(self, ctx):
-        msg = alg(self.players)
+        msg = self._alg()
         await ctx.send(msg)
+
+
+    def _alg(self):
+        p = list(self.players.keys())
+        while True:
+            random.shuffle(p)
+            curr = Comp(p, self.players)
+            if curr.avg_1 == curr.avg_2:
+                break
+
+        roles = ["Tank", "Damage", "Damage", "Support", "Support"]
+        team_1 = "\n\t\t".join([f"__{roles[i]}__: {curr.t1[i]}" for i in range(5)])
+        team_2 = "\n\t\t".join([f"__{roles[i]}__: {curr.t2[i]}" for i in range(5)])
+        msg = f"**__Match Average__: {curr.avg}**\n\n**Team 1:**\n\t\t{team_1} \n**Team 2:**\n\t\t{team_2}\n"
+        return msg
 
 
 async def setup(client):

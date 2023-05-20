@@ -1,5 +1,4 @@
 {
-  "Top 500": "1",
   "Grandmaster 1": "1",
   "Grandmaster 2": "2",
   "Grandmaster 3": "3",
@@ -34,5 +33,6 @@
   "Bronze 2": "32",
   "Bronze 3": "33",
   "Bronze 4": "34",
-  "Bronze 5": "35"
+  "Bronze 5": "35",
+  "Top 500": "1"
 }
