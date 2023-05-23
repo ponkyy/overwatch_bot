@@ -4,6 +4,7 @@ from discord import app_commands
 import json
 import random
 
+SPC = "\u1CBC"
 
 class Comp:
 
@@ -72,6 +73,10 @@ class Overwatch(commands.Cog):
         '''with open("ranks.json", 'r') as f:
             self.ranks = json.load(f)'''
 
+    def _get_emoji(self, name, role) -> str:
+        return self.role_emojis[self.players[name][role.lower()][:-2]]
+
+    @app_commands.checks.has_permissions(moderate_members=True)
     @app_commands.command(
         name="overwatch5v5",
         description="Creates a 5v5 matchup for Overwatch"
@@ -87,21 +92,20 @@ class Overwatch(commands.Cog):
                 break
 
         roles = ["Tank", "Damage", "Damage", "Support", "Support"]
-
         team_1, team_2 = [], []
+
         for i in range(5):
             r = roles[i]
             c1 = curr.t1[i]
             c2 = curr.t2[i]
-            e1 = "[HIDDEN]"
-            e2 = "[HIDDEN]"
-            '''e1 = self.role_emojis[self.players[c1][r.lower()][:-2]] # does not work for Top 500
-            e2 = self.role_emojis[self.players[c2][r.lower()][:-2]]'''
-            team_1.append(f"__{r}__: {c1} {e1}")
-            team_2.append(f"__{r}__: {c2} {e2}")
+            e1 = self._get_emoji(c1, r)
+            e2 = self._get_emoji(c2, r)
+            team_1.append(f"__{c1}__: {r} {e1}")
+            team_2.append(f"__{c2}__: {r} {e2}")
 
         team_1 = "\n\t\t".join(team_1)
         team_2 = "\n\t\t".join(team_2)
+
         msg = f"**__Match Average__: N/A**\n\n" \
               f"**Team 1:**\n\t\t{team_1}\n" \
               f"**Team 2:**\n\t\t{team_2}\n\n" \
@@ -109,7 +113,23 @@ class Overwatch(commands.Cog):
               f"Damage difference: {curr.stats['damage_diff']}\n" \
               f"Support difference: {curr.stats['support_diff']}\n" \
               f"**__Total team difference__**: {curr.stats['total_avg_diff']:.3f}"
-        await interaction.response.send_message(content=msg)
+
+        await interaction.response.send_message(msg)
+
+    @app_commands.command(
+        name="show_ranks",
+        description="Shows ranks of all players"
+    )
+    async def show_ranks(self, interaction: discord.Interaction):
+
+        data = []
+        for player in self.players:
+            e1 = self._get_emoji(player, "tank")
+            e2 = self._get_emoji(player, "damage")
+            e3 = self._get_emoji(player, "support")
+            data.append(f"**{player}**\n\tT - {e1} D - {e2} S - {e3}")
+        data = "\n".join(data)
+        await interaction.response.send_message(data, ephemeral=True)
 
 
 async def setup(client: commands.Bot) -> None:
