@@ -1,15 +1,11 @@
 import discord
+from discord.ext import commands
+from discord import app_commands
 import json
 import random
-from discord.ext import commands
 
 
 class Comp:
-
-    t1: list
-    t2: list
-
-    stats: dict
 
     def __init__(self, comp: list, players: dict):
         self.t1 = comp[:5]
@@ -58,8 +54,8 @@ class Comp:
         #list(ranks.values()).index(str(round(self.avg_1)))]
 
 
-class Overwatch2(commands.Cog):
-    def __init__(self, client):
+class Overwatch(commands.Cog):
+    def __init__(self, client: commands.Bot):
         self.client = client
         self.role_emojis = {
             "Bronze": "<:Bronze:1109603963424215060>",
@@ -76,20 +72,16 @@ class Overwatch2(commands.Cog):
         '''with open("ranks.json", 'r') as f:
             self.ranks = json.load(f)'''
 
-    @commands.has_permissions(administrator=True)
-    @commands.command()
-    async def overwatch(self, ctx):
-        msg = self._alg()
-        await ctx.send(msg)
-
-    def _alg(self) -> str:
+    @app_commands.command(
+        name="overwatch5v5",
+        description="Creates a 5v5 matchup for Overwatch"
+    )
+    async def overwatch(self, interaction: discord.Interaction):
         p = list(self.players.keys())
         p.remove("Mitch")
         while True:
             random.shuffle(p)
             curr = Comp(p, self.players)
-            if curr.t1[0] != "BinkPlayz" and curr.t2[0] != "BinkPlayz":
-                continue
             if curr.stats['total_avg_diff'] < 0.5 and curr.stats['tank_diff'] <= 5 and \
                     curr.stats['damage_diff'] <= 5 and curr.stats['support_diff'] <= 5:
                 break
@@ -117,11 +109,11 @@ class Overwatch2(commands.Cog):
               f"Damage difference: {curr.stats['damage_diff']}\n" \
               f"Support difference: {curr.stats['support_diff']}\n" \
               f"**__Total team difference__**: {curr.stats['total_avg_diff']:.3f}"
-        return msg
+        await interaction.response.send_message(content=msg)
 
 
-async def setup(client):
-    await client.add_cog(Overwatch2(client))
+async def setup(client: commands.Bot) -> None:
+    await client.add_cog(Overwatch(client))
 
 
 '''import json
