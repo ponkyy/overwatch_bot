@@ -13,7 +13,7 @@ class Comp:
 
     def __init__(self, comp: list, players: dict):
         self.t1 = comp[:5]
-        self.t2 = comp[5:]
+        self.t2 = comp[5:10]
         self._get_avgs(players)
 
     def _get_avgs(self, players):
@@ -84,11 +84,14 @@ class Overwatch2(commands.Cog):
 
     def _alg(self) -> str:
         p = list(self.players.keys())
+        p.remove("Mitch")
         while True:
             random.shuffle(p)
             curr = Comp(p, self.players)
-            if curr.stats['total_avg_diff'] < 0.2 and curr.stats['tank_diff'] <= 5 and \
-                    curr.stats['damage_diff'] <= 8 and curr.stats['support_diff'] <= 8:
+            if curr.t1[0] != "BinkPlayz" and curr.t2[0] != "BinkPlayz":
+                continue
+            if curr.stats['total_avg_diff'] < 0.5 and curr.stats['tank_diff'] <= 5 and \
+                    curr.stats['damage_diff'] <= 5 and curr.stats['support_diff'] <= 5:
                 break
 
         roles = ["Tank", "Damage", "Damage", "Support", "Support"]
@@ -98,8 +101,10 @@ class Overwatch2(commands.Cog):
             r = roles[i]
             c1 = curr.t1[i]
             c2 = curr.t2[i]
-            e1 = self.role_emojis[self.players[c1][r.lower()][:-2]] # does not work for Top 500
-            e2 = self.role_emojis[self.players[c2][r.lower()][:-2]]
+            e1 = "[HIDDEN]"
+            e2 = "[HIDDEN]"
+            '''e1 = self.role_emojis[self.players[c1][r.lower()][:-2]] # does not work for Top 500
+            e2 = self.role_emojis[self.players[c2][r.lower()][:-2]]'''
             team_1.append(f"__{r}__: {c1} {e1}")
             team_2.append(f"__{r}__: {c2} {e2}")
 

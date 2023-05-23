@@ -124,10 +124,10 @@ async def on_message(msg):
         await msg.channel.send(f"{words[_id][msg.content]}")
 
     # meow
-    '''if msg.content == "meow" and msg.author != client.user:
+    if msg.content == "meow" and msg.author != client.user:
         await msg.channel.send("meow")
 
-    '''
+
 
     # flapjacks image
 
@@ -140,8 +140,8 @@ async def on_message(msg):
             await msg.channel.send(file=discord.File('heisenduck.png'))
 
     if msg.author.id == flapjacks:
-        r = random.randint(1, 100000)
-        if r == 500:
+        r = random.randint(1, 50)
+        if r == 25:
             await msg.channel.send(file=discord.File('flapjacks.gif'))
 
     await client.process_commands(msg)
@@ -158,5 +158,5 @@ async def main():
         await load_extensions()
         await client.start(TOKEN)
 
-TOKEN = "OTk5NDQ0Mjc3MzEyNjI2ODU4.GaEnFI.UuLXTVJePra32HXGpyOcTYQdyUCo2U9nocvSr8"
+TOKEN = "OTk5NDQ0Mjc3MzEyNjI2ODU4.G3xa-L.vGcP9Sw3CjUklyDPYFkuU9W9Y-RHy26WjEVoqM"
 asyncio.run(main())
