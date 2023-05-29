@@ -1,10 +1,83 @@
+import asyncio
+import enum
+from datetime import datetime
+from typing import Optional
+
 import discord
 from discord.ext import commands
 from discord import app_commands
+from RoleQueueObjects import RoleQueueSelect
 import json
 import random
 
-SPC = "\u1CBC"
+with open("config.json", "r") as f:
+    data = json.load(f)
+    RANKS = data["RANKS"]
+    URL = data["URL"]
+
+with open("players.json", "r") as f:
+    PLAYERS: dict[str, dict[str, str]] = json.load(f)
+
+
+class Results(enum.Enum):
+    team_1 = 1
+    team_2 = 2
+    draw = 3
+    annul = 4
+
+
+class Bool(enum.Enum):
+    false = 0
+    true = 1
+
+
+PlayerChoices = enum.Enum("PlayerChoices", list(PLAYERS.keys()))
+
+
+class Player:
+
+    def __init__(self, name: str, queues: list[str]):
+        self.name = name
+        self.queues = [True, True, True]
+        if len(queues) != 3:
+            if "Tank" not in queues:
+                self.queues[0] = False
+            elif "Damage" not in queues:
+                self.queues[1] = False
+            elif "Support" not in queues:
+                self.queues[2] = False
+        self.role: Optional[str] = None
+
+    def adjust(self, weights: list[int]):
+        return weights
+
+
+class Match:
+
+    def __init__(self, players: list[Player]):
+        self.players = players
+        self.team_1: list[Player] = []
+        self.team_2: list[Player] = []
+
+    def make_teams(self):
+
+        roles: dict[str, list[Player]] = {
+            "Tank": [],
+            "Damage": [],
+            "Support": []
+        }
+        weights = [2, 4, 4]
+        for player in self.players:
+            if weights == [0, 0, 0]:  # no more general slots available
+                break
+            curr_weights = player.adjust(weights)
+            if curr_weights == [0, 0, 0]:  # no more valid queue slots available
+                pass
+            player.role = random.choices(["Tank", "Damage", "Support"],
+                                         weights=curr_weights, k=1)[0]
+            roles[player.role].append(player)
+            weights[list(roles.keys()).index(player.role)] -= 1
+
 
 class Comp:
 
@@ -14,50 +87,51 @@ class Comp:
         self._get_avgs(players)
 
     def _get_avgs(self, players):
-        with open("ranks.json", "r") as f:
-            ranks = json.load(f)
         self.stats = {}
 
         self.team_avg_1 = sum([
-            int(ranks[players[self.t1[0]]["tank"]]) * 1.1,
-            int(ranks[players[self.t1[1]]["damage"]]),
-            int(ranks[players[self.t1[2]]["damage"]]),
-            int(ranks[players[self.t1[3]]["support"]]),
-            int(ranks[players[self.t1[4]]["support"]])
+            int(RANKS[players[self.t1[0]]["tank"]]) * 1.1,
+            int(RANKS[players[self.t1[1]]["damage"]]),
+            int(RANKS[players[self.t1[2]]["damage"]]),
+            int(RANKS[players[self.t1[3]]["support"]]),
+            int(RANKS[players[self.t1[4]]["support"]])
         ]) / 5
 
         self.team_avg_2 = sum([
-            int(ranks[players[self.t2[0]]["tank"]]) * 1.1,
-            int(ranks[players[self.t2[1]]["damage"]]),
-            int(ranks[players[self.t2[2]]["damage"]]),
-            int(ranks[players[self.t2[3]]["support"]]),
-            int(ranks[players[self.t2[4]]["support"]])
+            int(RANKS[players[self.t2[0]]["tank"]]) * 1.1,
+            int(RANKS[players[self.t2[1]]["damage"]]),
+            int(RANKS[players[self.t2[2]]["damage"]]),
+            int(RANKS[players[self.t2[3]]["support"]]),
+            int(RANKS[players[self.t2[4]]["support"]])
         ]) / 5
 
         self.stats['total_avg_diff'] = abs(self.team_avg_1 - self.team_avg_2)
 
-        self.stats['tank_diff'] = abs(int(ranks[players[self.t1[0]]["tank"]]) -
-                                      int(ranks[players[self.t2[0]]["tank"]]))
+        self.stats['tank_diff'] = abs(int(RANKS[players[self.t1[0]]["tank"]]) -
+                                      int(RANKS[players[self.t2[0]]["tank"]]))
 
         self.stats['damage_diff'] = abs(
-            (int(ranks[players[self.t1[1]]["damage"]]) +
-             int(ranks[players[self.t1[2]]["damage"]])) / 2 -
-            (int(ranks[players[self.t2[1]]["damage"]]) +
-             int(ranks[players[self.t2[2]]["damage"]])) / 2)
+            (int(RANKS[players[self.t1[1]]["damage"]]) +
+             int(RANKS[players[self.t1[2]]["damage"]])) / 2 -
+            (int(RANKS[players[self.t2[1]]["damage"]]) +
+             int(RANKS[players[self.t2[2]]["damage"]])) / 2)
 
         self.stats['support_diff'] = abs(
-            (int(ranks[players[self.t1[3]]["support"]]) +
-             int(ranks[players[self.t1[4]]["support"]])) / 2
-            - (int(ranks[players[self.t2[3]]["support"]]) +
-               int(ranks[players[self.t2[4]]["support"]])) / 2)
+            (int(RANKS[players[self.t1[3]]["support"]]) +
+             int(RANKS[players[self.t1[4]]["support"]])) / 2
+            - (int(RANKS[players[self.t2[3]]["support"]]) +
+               int(RANKS[players[self.t2[4]]["support"]])) / 2)
 
-        #self.avg = list(ranks.keys())[
-        #list(ranks.values()).index(str(round(self.avg_1)))]
+        # self.avg = list(ranks.keys())[
+        # list(ranks.values()).index(str(round(self.avg_1)))]
 
 
 class Overwatch(commands.Cog):
+
     def __init__(self, client: commands.Bot):
         self.client = client
+        self.active = False
+        self.queues = {}
         self.role_emojis = {
             "Bronze": "<:Bronze:1109603963424215060>",
             "Silver": "<:Silver:1109603962128171128>",
@@ -68,27 +142,74 @@ class Overwatch(commands.Cog):
             "Grandmaster": "<:Grandmaster:1109604769963716688>",
             "Top 500": "<:Top500:1109604938297905293>",
         }
-        with open("players.json", 'r') as f:
-            self.players = json.load(f)
-        '''with open("ranks.json", 'r') as f:
-            self.ranks = json.load(f)'''
+        self.players = PLAYERS
 
     def _get_emoji(self, name, role) -> str:
         return self.role_emojis[self.players[name][role.lower()][:-2]]
+
+    async def role_queue(self, interaction: discord.Interaction, timeout: int):
+        view = discord.ui.View()
+        select = RoleQueueSelect(interaction)
+        view.add_item(select)
+        await interaction.response.send_message("Choose role queues", view=view)
+        i = timeout
+        msg = await interaction.followup.send(content=".")
+        while i >= 0:
+            await interaction.followup.edit_message(
+                msg.id, content=f"**({i} seconds remaining)**")
+            await asyncio.sleep(1)
+            i -= 1
+        interaction.is_expired()
+        await asyncio.sleep(2)
+        await interaction.followup.delete_message(msg.id)
+        await interaction.delete_original_response()
+        return select.queues
 
     @app_commands.checks.has_permissions(moderate_members=True)
     @app_commands.command(
         name="overwatch5v5",
         description="Creates a 5v5 matchup for Overwatch"
     )
-    async def overwatch(self, interaction: discord.Interaction):
+    @app_commands.describe(timeout="Time to select role", test="For testing")
+    async def overwatch(self, interaction: discord.Interaction,
+                        timeout: app_commands.Range[int, 5, 120] = 15,
+                        test: Bool = Bool.false) -> None:
+
+        keys = list(PLAYERS.keys())
+        keys.remove("Mitch")
+        if test == Bool.true:
+            queue: dict[str, list[str]] = {player: ['Tank', 'Damage', 'Support'] for player in keys}
+
+            players = [Player(player, queue[player]) for player in queue]
+            match = Match(players)
+            match.make_teams()
+            for player in match.players:
+                print(player.name)
+                print(player.role)
+            return
+
+        if self.active:
+            await interaction.response.send_message(
+                "A game is currently active. This command has no effect",
+                ephemeral=True
+            )
+            return
+
+        queues = await self.role_queue(interaction, timeout)
+
+        if len(queues) < 10:
+            await interaction.followup.send(f"Not enough players queued: **{len(queues)} queued**")
+            return
+
         p = list(self.players.keys())
-        p.remove("Mitch")
+        p.remove("Mitch")  # remove
         while True:
             random.shuffle(p)
             curr = Comp(p, self.players)
-            if curr.stats['total_avg_diff'] < 0.5 and curr.stats['tank_diff'] <= 5 and \
-                    curr.stats['damage_diff'] <= 5 and curr.stats['support_diff'] <= 5:
+            if curr.stats['total_avg_diff'] < 0.5 and curr.stats[
+                'tank_diff'] <= 5 and \
+                    curr.stats['damage_diff'] <= 5 and curr.stats[
+                'support_diff'] <= 5:
                 break
 
         roles = ["Tank", "Damage", "Damage", "Support", "Support"]
@@ -114,7 +235,8 @@ class Overwatch(commands.Cog):
               f"Support difference: {curr.stats['support_diff']}\n" \
               f"**__Total team difference__**: {curr.stats['total_avg_diff']:.3f}"
 
-        await interaction.response.send_message(msg)
+        await interaction.followup.send(msg)
+        self.active = True
 
     @app_commands.command(
         name="show_ranks",
@@ -130,6 +252,106 @@ class Overwatch(commands.Cog):
             data.append(f"**{player}**\n\tT - {e1} D - {e2} S - {e3}")
         data = "\n".join(data)
         await interaction.response.send_message(data, ephemeral=True)
+
+    @app_commands.checks.has_permissions(moderate_members=True)
+    @app_commands.command(name="role_queue_test", description="Set role queues")
+    async def role_queue_test(self, interaction: discord.Interaction):
+        await self.role_queue(interaction, 5)
+
+    @app_commands.command(
+        name="matchups_link",
+        description="Presents button with link to matchups page")
+    async def get_matchups_link(self, interaction: discord.Interaction):
+
+        button = discord.ui.Button(
+            label="To Matchups",
+            style=discord.ButtonStyle.url,
+            url=URL)
+        view = discord.ui.View(timeout=10)
+        view.add_item(button)
+        await interaction.response.send_message(
+            "Click button to visit the matchups page",
+            view=view,
+            delete_after=10
+        )
+
+    @app_commands.command(
+        name="end_game",
+        description="Ends an active 5v5 matchup"
+    )
+    @app_commands.describe(result="Result of the match")
+    @app_commands.checks.has_permissions(moderate_members=True)
+    async def end_game(self, interaction: discord.Interaction,
+                       result: Results,
+                       capture_1: Optional[int] = None,
+                       capture_2: Optional[int] = None,
+                       distance_1: Optional[int] = None,
+                       distance_2: Optional[int] = None
+                       ):
+        if not self.active:
+            await interaction.response.send_message(
+                "There is no active game. This command has no effect",
+                ephemeral=True
+            )
+            return
+        if result == Results.annul:
+            await interaction.response.send_message("Match annulled!",
+                                                    ephemeral=True)
+            self.active = False
+            return
+        elif result == Results.team_1:
+            winner = "Team 1 has won the match!"
+        elif result == Results.team_2:
+            winner = "Team 2 has won the match!"
+        else:
+            winner = "The match has resulted in a draw!"
+
+        with open("match_information.json", "r") as f:
+            data = json.load(f)["MATCH_HISTORY"]
+            matches = data["MATCHES"]
+            total = data["TOTAL"] + 1
+
+        now = datetime.now()
+
+        curr_match = {
+            "id": total,
+            "date": now.strftime("%d-%m-%Y %H:%M:%S"),
+            "team_1": "team_1",
+            "team_2": "team_2",
+            "result": result.name,
+        }
+        matches.append(curr_match)
+        with open("match_information.json", "w") as f:
+
+            data["MATCHES"] = matches
+            data["TOTAL"] = total
+            json.dump(data, f, indent=4)
+
+        await interaction.response.send_message(f"{winner}\n{curr_match}")
+        self.active = False
+
+    @app_commands.command(name="set_user_to_player",
+                          description="Associates a user to an Overwatch username")
+    @app_commands.describe(user="User")
+    @app_commands.checks.has_permissions(moderate_members=True)
+    async def set_user_to_player(self, interaction: discord.Interaction,
+                                 user: discord.Member, player: PlayerChoices):
+
+        with open("config.json", "r") as f:
+            data = json.load(f)
+            id_to_player = data["ID_TO_PLAYER"]
+        id = str(user.id)
+        if id not in id_to_player:
+            id_to_player[id] = player.name
+            with open("config.json", "w") as f:
+                json.dump(data, f, indent=4)
+            await interaction.response.send_message(
+                f"**{user.display_name}** successfully set to **{player.name}**",
+                ephemeral=True)
+        else:
+            await interaction.response.send_message(
+                f"**{user.display_name}** already set to **{id_to_player[id]}**",
+                ephemeral=True)
 
 
 async def setup(client: commands.Bot) -> None:
