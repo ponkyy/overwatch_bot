@@ -26,11 +26,6 @@ class Results(enum.Enum):
     annul = 4
 
 
-class Bool(enum.Enum):
-    false = 0
-    true = 1
-
-
 PlayerChoices = enum.Enum("PlayerChoices", list(PLAYERS.keys()))
 
 
@@ -72,9 +67,8 @@ class Match:
             "Damage": [],
             "Support": []
         }
-        #self.make_teams()
 
-    def make_teams(self) -> int:
+    def make_teams(self) -> bool:
 
         weights = [2, 4, 4]
         for player in self.players:
@@ -85,9 +79,9 @@ class Match:
                 pass'''
             try:
                 player.role = random.choices(["Tank", "Damage", "Support"],
-                                         weights=curr_weights, k=1)[0]
+                                             weights=curr_weights, k=1)[0]
             except ValueError:
-                return 1  # teams made improperly
+                return True  # teams made improperly
 
             self.roles[player.role].append(player)
             weights[list(self.roles.keys()).index(player.role)] -= 1
@@ -98,7 +92,7 @@ class Match:
         self.team_2.extend(self.roles["Tank"][1:])
         self.team_2.extend(self.roles["Damage"][2:])
         self.team_2.extend(self.roles["Support"][2:])
-        return 0
+        return False
 
     def __str__(self) -> str:
         return f"{self.team_1}\n{self.team_2}"
@@ -195,10 +189,9 @@ class Overwatch(commands.Cog):
         name="overwatch5v5",
         description="Creates a 5v5 matchup for Overwatch"
     )
-    @app_commands.describe(timeout="Time to select role", flex="For testing") # to become for flexing
+    @app_commands.describe(timeout="Time to select role")
     async def overwatch(self, interaction: discord.Interaction,
-                        timeout: app_commands.Range[int, 5, 120] = 15,
-                        flex: Bool = Bool.false) -> None:
+                        timeout: app_commands.Range[int, 5, 120] = 15) -> None:
 
         if self.active:
             await interaction.response.send_message(
@@ -208,16 +201,11 @@ class Overwatch(commands.Cog):
             return
 
         p = list(PLAYERS.keys())
-        if flex == Bool.true: # for testing cuz i dont wanna make proper test :D
-            await interaction.response.defer()
-            queues: dict[str, list[str]] = {player: ['Damage', 'Support'] for player in p}
-            queues["ponky"] = ['Tank', 'Damage', 'Support']
-            queues["trk20"] = ['Tank', 'Damage', 'Support']
-        else:
-            queues = await self.role_queue(interaction, timeout)
 
+        queues = await self.role_queue(interaction, timeout)
         if len(queues) < 10:
-            await interaction.followup.send(f"Not enough players queued: **{len(queues)} queued**")
+            await interaction.followup.send(
+                f"Not enough players queued: **{len(queues)} queued**")
             return
 
         bad_teams = 0
@@ -225,7 +213,7 @@ class Overwatch(commands.Cog):
             random.shuffle(p)
             players = [Player(player, queues[player]) for player in p[:10]]
             match = Match(players)
-            if match.make_teams() == 1:  # teams were not made well
+            if match.make_teams():  # teams were not made well
                 bad_teams += 1
                 continue
             # await interaction.response.send_message(str(match))
@@ -240,7 +228,7 @@ class Overwatch(commands.Cog):
                     curr.stats['damage_diff'] <= 5 and curr.stats[
                 'support_diff'] <= 5:
                 break
-            #bad_teams += 1  #  likely required in timeout cases
+            #  bad_teams += 1  #  likely required in timeout cases
             #  i should really make this not rely so heavily on randomness
         else:  # did not break and thus bad_teams reached limit
             await interaction.followup.send("Unable to form teams. Try again")
@@ -269,7 +257,6 @@ class Overwatch(commands.Cog):
               f"Support difference: {curr.stats['support_diff']}\n" \
               f"**__Total team difference__**: {curr.stats['total_avg_diff']:.3f}\n" \
               f"{bad_teams=}"
-
 
         await interaction.followup.send(msg)
         self.active = True
