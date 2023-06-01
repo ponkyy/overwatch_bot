@@ -60,8 +60,8 @@ class Match:
 
     def __init__(self, players: list[Player]):
         self.players = players
-        self.team_1: list[Player] = []
-        self.team_2: list[Player] = []
+        self.t1: list[Player] = []
+        self.t2: list[Player] = []
         self.roles: dict[str, list[Player]] = {
             "Tank": [],
             "Damage": [],
@@ -86,61 +86,47 @@ class Match:
             self.roles[player.role].append(player)
             weights[list(self.roles.keys()).index(player.role)] -= 1
 
-        self.team_1.extend(self.roles["Tank"][:1])
-        self.team_1.extend(self.roles["Damage"][:2])
-        self.team_1.extend(self.roles["Support"][:2])
-        self.team_2.extend(self.roles["Tank"][1:])
-        self.team_2.extend(self.roles["Damage"][2:])
-        self.team_2.extend(self.roles["Support"][2:])
+        self.t1.extend(self.roles["Tank"][:1])
+        self.t1.extend(self.roles["Damage"][:2])
+        self.t1.extend(self.roles["Support"][:2])
+        self.t2.extend(self.roles["Tank"][1:])
+        self.t2.extend(self.roles["Damage"][2:])
+        self.t2.extend(self.roles["Support"][2:])
         return False
 
     def __str__(self) -> str:
-        return f"{self.team_1}\n{self.team_2}"
+        return f"{self.t1}\n{self.t2}"
 
+    def _get_rank(self, t, i, role):
+        return int(RANKS[PLAYERS[t[i].name][role]])
 
-class Comp:
+    def get_avgs(self) -> dict:
 
-    def __init__(self, comp: list, players: dict):
-        self.t1 = comp[:5]
-        self.t2 = comp[5:10]
-        self._get_avgs(players)
+        tank1 = self._get_rank(self.t1, 0, "tank")
+        tank2 = self._get_rank(self.t2, 0, "tank")
+        dam1 = self._get_rank(self.t1, 1, "damage")
+        dam2 = self._get_rank(self.t1, 2, "damage")
+        dam3 = self._get_rank(self.t2, 1, "damage")
+        dam4 = self._get_rank(self.t2, 2, "damage")
+        sup1 = self._get_rank(self.t1, 3, "support")
+        sup2 = self._get_rank(self.t1, 4, "support")
+        sup3 = self._get_rank(self.t2, 3, "support")
+        sup4 = self._get_rank(self.t2, 4, "support")
 
-    def _get_avgs(self, players):
-        self.stats = {}
+        stats = {}
+        team_avg_1 = sum([tank1 * 1.1, dam1, dam2, sup1, sup2]) / 5
 
-        self.team_avg_1 = sum([
-            int(RANKS[players[self.t1[0]]["tank"]]) * 1.1,
-            int(RANKS[players[self.t1[1]]["damage"]]),
-            int(RANKS[players[self.t1[2]]["damage"]]),
-            int(RANKS[players[self.t1[3]]["support"]]),
-            int(RANKS[players[self.t1[4]]["support"]])
-        ]) / 5
+        team_avg_2 = sum([tank2 * 1.1, dam3, dam4, sup3, sup4]) / 5
 
-        self.team_avg_2 = sum([
-            int(RANKS[players[self.t2[0]]["tank"]]) * 1.1,
-            int(RANKS[players[self.t2[1]]["damage"]]),
-            int(RANKS[players[self.t2[2]]["damage"]]),
-            int(RANKS[players[self.t2[3]]["support"]]),
-            int(RANKS[players[self.t2[4]]["support"]])
-        ]) / 5
+        stats['total_avg_diff'] = abs(team_avg_1 - team_avg_2)
 
-        self.stats['total_avg_diff'] = abs(self.team_avg_1 - self.team_avg_2)
+        stats['tank_diff'] = abs(tank1 - tank2)
 
-        self.stats['tank_diff'] = abs(int(RANKS[players[self.t1[0]]["tank"]]) -
-                                      int(RANKS[players[self.t2[0]]["tank"]]))
+        stats['damage_diff'] = abs(dam1 + dam2 - dam3 - dam4) / 2
 
-        self.stats['damage_diff'] = abs(
-            (int(RANKS[players[self.t1[1]]["damage"]]) +
-             int(RANKS[players[self.t1[2]]["damage"]])) / 2 -
-            (int(RANKS[players[self.t2[1]]["damage"]]) +
-             int(RANKS[players[self.t2[2]]["damage"]])) / 2)
+        stats['support_diff'] = abs(sup1 + sup2 - sup3 - sup4) / 2
 
-        self.stats['support_diff'] = abs(
-            (int(RANKS[players[self.t1[3]]["support"]]) +
-             int(RANKS[players[self.t1[4]]["support"]])) / 2
-            - (int(RANKS[players[self.t2[3]]["support"]]) +
-               int(RANKS[players[self.t2[4]]["support"]])) / 2)
-
+        return stats
         # self.avg = list(ranks.keys())[
         # list(ranks.values()).index(str(round(self.avg_1)))]
 
@@ -220,12 +206,17 @@ class Overwatch(commands.Cog):
 
             # Turn the match to being readable by Comp
 
-            match_comp = match.team_1 + match.team_2
-            match_comp = [repr(x) for x in match_comp]
-            curr = Comp(match_comp, self.players)
-            if curr.stats['total_avg_diff'] < 0.5 and curr.stats[
+            '''match_comp = match.team_1 + match.team_2
+            match_comp = [repr(x) for x in match_comp]'''
+            try:
+                stats = match.get_avgs()
+            except KeyError as e:
+                print(self.players)
+                print(e)
+                return
+            if stats['total_avg_diff'] < 0.5 and stats[
                 'tank_diff'] <= 5 and \
-                    curr.stats['damage_diff'] <= 5 and curr.stats[
+                    stats['damage_diff'] <= 5 and stats[
                 'support_diff'] <= 5:
                 break
             #  bad_teams += 1  #  likely required in timeout cases
@@ -239,8 +230,8 @@ class Overwatch(commands.Cog):
 
         for i in range(5):
             r = roles[i]
-            c1 = curr.t1[i]
-            c2 = curr.t2[i]
+            c1 = match.t1[i].name
+            c2 = match.t2[i].name
             e1 = self._get_emoji(c1, r)
             e2 = self._get_emoji(c2, r)
             team_1.append(f"__{c1}__: {r} {e1}")
@@ -252,10 +243,10 @@ class Overwatch(commands.Cog):
         msg = f"**__Match Average__: N/A**\n\n" \
               f"**Team 1:**\n\t\t{team_1}\n" \
               f"**Team 2:**\n\t\t{team_2}\n\n" \
-              f"Tank difference: {curr.stats['tank_diff']}\n" \
-              f"Damage difference: {curr.stats['damage_diff']}\n" \
-              f"Support difference: {curr.stats['support_diff']}\n" \
-              f"**__Total team difference__**: {curr.stats['total_avg_diff']:.3f}\n" \
+              f"Tank difference: {stats['tank_diff']}\n" \
+              f"Damage difference: {stats['damage_diff']}\n" \
+              f"Support difference: {stats['support_diff']}\n" \
+              f"**__Total team difference__**: {stats['total_avg_diff']:.3f}\n" \
               f"{bad_teams=}"
 
         await interaction.followup.send(msg)
@@ -355,7 +346,7 @@ class Overwatch(commands.Cog):
 
     @app_commands.command(name="set_user_to_player",
                           description="Associates a user to an Overwatch username")
-    @app_commands.describe(user="User")
+    @app_commands.describe(user="User", player="Player")
     @app_commands.checks.has_permissions(moderate_members=True)
     async def set_user_to_player(self, interaction: discord.Interaction,
                                  user: discord.Member, player: PlayerChoices):
