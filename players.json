@@ -2,16 +2,16 @@
   "ProteinCake": {
     "tank": "Platinum 1",
     "damage": "Diamond 2",
-    "support": "Diamond 5"
+    "support": "Platinum 5"
   },
   "BinkPlayz": {
     "tank": "Diamond 1",
-    "damage": "Platinum 2",
+    "damage": "Platinum 1",
     "support": "Diamond 1"
   },
   "ponky": {
-    "tank": "Platinum 1",
-    "damage": "Diamond 5",
+    "tank": "Diamond 1",
+    "damage": "Diamond 3",
     "support": "Diamond 3"
   },
   "trk20": {
@@ -20,38 +20,43 @@
     "support": "Platinum 1"
   },
   "JCadoo": {
-    "tank": "Platinum 1",
-    "damage": "Platinum 5",
+    "tank": "Platinum 2",
+    "damage": "Platinum 4",
     "support": "Platinum 2"
   },
   "FlapJacks": {
     "tank": "Gold 3",
-    "damage": "Platinum 1",
-    "support": "Platinum 2"
+    "damage": "Platinum 2",
+    "support": "Diamond 5"
   },
   "Rowley": {
-    "tank": "Platinum 3",
-    "damage": "Platinum 3",
-    "support": "Gold 2"
+    "tank": "Platinum 5",
+    "damage": "Platinum 5",
+    "support": "Gold 1"
   },
   "DirectVortex": {
     "tank": "Platinum 1",
-    "damage": "Platinum 1",
+    "damage": "Diamond 4",
     "support": "Diamond 5"
   },
   "JulianDotCom": {
-    "tank": "Gold 4",
-    "damage": "Silver 1",
+    "tank": "Platinum 4",
+    "damage": "Gold 3",
     "support": "Gold 3"
   },
   "twinaces": {
     "tank": "Silver 2",
-    "damage": "Silver 5",
+    "damage": "Gold 4",
     "support": "Silver 3"
   },
   "Mitch": {
     "tank": "Bronze 1",
     "damage": "Silver 4",
     "support": "Bronze 1"
+  },
+  "Buckwheat": {
+    "tank": "Bronze 1",
+    "damage": "Silver 1",
+    "support": "Gold 4"
   }
 }

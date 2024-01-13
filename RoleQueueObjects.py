@@ -3,11 +3,6 @@ import json
 from discord import ui, SelectOption, Interaction
 import discord
 
-with open("config.json", "r") as f:
-    data = json.load(f)
-    ID_TO_PLAYER = data["ID_TO_PLAYER"]
-
-
 class RoleQueueSelect(ui.Select):
 
     def __init__(self, view_int: Interaction):
@@ -23,6 +18,9 @@ class RoleQueueSelect(ui.Select):
         self.queues = {}
 
     async def callback(self, interaction: Interaction):
+        with open("config.json", "r") as f:
+            data = json.load(f)
+            ID_TO_PLAYER = data["ID_TO_PLAYER"]
         user = interaction.user
         self.queues[ID_TO_PLAYER[str(user.id)]] = self.values
         await interaction.response.send_message(

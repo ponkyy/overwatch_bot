@@ -114,9 +114,9 @@ class Match:
         sup4 = self._get_rank(self.t2, 4, "support")
 
         stats = {}
-        team_avg_1 = sum([tank1 * 1.1, dam1, dam2, sup1, sup2]) / 5
+        team_avg_1 = sum([tank1, dam1, dam2, sup1, sup2]) / 5
 
-        team_avg_2 = sum([tank2 * 1.1, dam3, dam4, sup3, sup4]) / 5
+        team_avg_2 = sum([tank2, dam3, dam4, sup3, sup4]) / 5
 
         stats['total_avg_diff'] = abs(team_avg_1 - team_avg_2)
 
@@ -149,8 +149,9 @@ class Overwatch(commands.Cog):
         }
         self.players = PLAYERS
 
-    def _get_emoji(self, name, role) -> str:
-        return self.role_emojis[self.players[name][role.lower()][:-2]]
+    def _get_rank(self, name, role) -> str:
+        rank = self.players[name][role.lower()]
+        return f"{self.role_emojis[rank[:-2]]} **{rank[-1]}**"
 
     async def role_queue(self, interaction: discord.Interaction, timeout: int):
         view = discord.ui.View()
@@ -194,10 +195,12 @@ class Overwatch(commands.Cog):
                 f"Not enough players queued: **{len(queues)} queued**")
             return
 
+        p = list(queues.keys())
+
         bad_teams = 0
         while bad_teams != 1000:
             random.shuffle(p)
-            players = [Player(player, queues[player]) for player in p[:10]]
+            players = [Player(player, queues[player]) for player in p]
             match = Match(players)
             if match.make_teams():  # teams were not made well
                 bad_teams += 1
@@ -232,8 +235,8 @@ class Overwatch(commands.Cog):
             r = roles[i]
             c1 = match.t1[i].name
             c2 = match.t2[i].name
-            e1 = self._get_emoji(c1, r)
-            e2 = self._get_emoji(c2, r)
+            e1 = self._get_rank(c1, r)
+            e2 = self._get_rank(c2, r)
             team_1.append(f"__{c1}__: {r} {e1}")
             team_2.append(f"__{c2}__: {r} {e2}")
 
@@ -257,15 +260,18 @@ class Overwatch(commands.Cog):
         description="Shows ranks of all players"
     )
     async def show_ranks(self, interaction: discord.Interaction):
+        with open("players.json", "r") as f:
+            self.players = json.load(f)
 
         data = []
         for player in self.players:
-            e1 = self._get_emoji(player, "tank")
-            e2 = self._get_emoji(player, "damage")
-            e3 = self._get_emoji(player, "support")
-            data.append(f"**{player}**\n\tT - {e1} D - {e2} S - {e3}")
+            e1 = self._get_rank(player, "tank")
+            e2 = self._get_rank(player, "damage")
+            e3 = self._get_rank(player, "support")
+            data.append(f"**{player}**\n\tT - {e1}  D - {e2}  S - {e3}")
+        #data.sort(key=lambda x: sum())
         data = "\n".join(data)
-        await interaction.response.send_message(data, ephemeral=True)
+        await interaction.response.send_message(data)
 
     @app_commands.checks.has_permissions(moderate_members=True)
     @app_commands.command(name="role_queue_test", description="Set role queues")
