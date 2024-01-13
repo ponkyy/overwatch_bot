@@ -153,12 +153,12 @@ class Overwatch(commands.Cog):
         rank = self.players[name][role.lower()]
         return f"{self.role_emojis[rank[:-2]]} **{rank[-1]}**"
 
-    async def role_queue(self, interaction: discord.Interaction, timeout: int):
+    async def role_queue(self, interaction: discord.Interaction):
         view = discord.ui.View()
         select = RoleQueueSelect(interaction)
         view.add_item(select)
-        await interaction.response.send_message("Choose role queues", view=view)
-        i = timeout
+        await interaction.response.send_message(select.queue_msg, view=view)
+        i = 20
         msg = await interaction.followup.send(content=".")
         while i >= 0:
             await interaction.followup.edit_message(
@@ -176,9 +176,10 @@ class Overwatch(commands.Cog):
         name="overwatch5v5",
         description="Creates a 5v5 matchup for Overwatch"
     )
-    @app_commands.describe(timeout="Time to select role")
-    async def overwatch(self, interaction: discord.Interaction,
-                        timeout: app_commands.Range[int, 5, 120] = 15) -> None:
+    #@app_commands.describe(timeout="Time to select role")
+    async def overwatch(self, interaction: discord.Interaction) -> None:
+
+
 
         if self.active:
             await interaction.response.send_message(
@@ -189,7 +190,7 @@ class Overwatch(commands.Cog):
 
         p = list(PLAYERS.keys())
 
-        queues = await self.role_queue(interaction, timeout)
+        queues = await self.role_queue(interaction)
         if len(queues) < 10:
             await interaction.followup.send(
                 f"Not enough players queued: **{len(queues)} queued**")
