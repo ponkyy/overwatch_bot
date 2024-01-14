@@ -1,14 +1,17 @@
 import asyncio
 import enum
-from datetime import datetime
-from typing import Optional
-
-import discord
-from discord.ext import commands
-from discord import app_commands
-from RoleQueueObjects import RoleQueueSelect
 import json
 import random
+from datetime import datetime
+from itertools import combinations
+from typing import Optional
+from multiprocessing import Pool
+import discord
+from discord import app_commands
+from discord.ext import commands
+import time
+
+from RoleQueueObjects import RoleQueueSelect
 
 with open("config.json", "r") as f:
     data = json.load(f)
@@ -48,6 +51,11 @@ class Player:
                 self.queues[2] = False
         self.role: Optional[str] = None
 
+    def as_role(self, role: str):
+        temp = Player(self.name, self.queues)
+        temp.role = role
+        return temp
+
     def __repr__(self) -> str:
         return self.name
 
@@ -59,6 +67,46 @@ class Player:
             else:
                 curr.append(0)
         return curr
+
+def generate_combinations(args):
+    tanks, dps_players, support_players = args
+    team1_tank = tanks[0]
+    team2_tank = tanks[1]
+    used_players = tanks
+    valid_combinations = []
+    for team1_dps in combinations([p for p in dps_players if p not in used_players], 2):
+        used_players = tanks + team1_dps
+        for team2_dps in combinations([p for p in dps_players if p not in used_players], 2):
+            used_players = tanks + team1_dps + team2_dps
+            for team1_support in combinations([p for p in support_players if p not in used_players], 2):
+                used_players = tanks + team1_dps + team2_dps + team1_support
+                team2_support = [p for p in support_players if p not in used_players]
+                team1 = [team1_tank.as_role("tank")] + [p.as_role("dps") for p in team1_dps] + [
+                    p.as_role("support") for p in team1_support]
+                team2 = [team2_tank.as_role("tank")] + [p.as_role("dps") for p in team2_dps] + [
+                    p.as_role("support") for p in team2_support]
+                valid_combinations.append((team1, team2))
+    return valid_combinations
+def generate_team_combos(players: list[Player]):
+    valid_combinations = []
+
+    # Separate players into role-specific lists
+    tank_players = [player for player in players if player.queues[0]]
+    dps_players = [player for player in players if player.queues[1]]
+    support_players = [player for player in players if player.queues[2]]
+
+    # Generate combinations with role constraints
+    args_list = [[tanks, support_players, dps_players] for tanks in combinations(tank_players, 2)]
+    start = time.time()
+    with Pool(12) as p:
+        results = p.map(generate_combinations, args_list)
+        p.close()
+        p.join()
+        for result in results:
+            valid_combinations.extend(result)
+    print(time.time() - start)
+
+    return valid_combinations
 
 
 class Match:
@@ -400,16 +448,6 @@ import new
 import random
 
 clear = lambda: os.system('clear')
-
-
-def display_teams(team_1, team_2):
-    print("Team 1: ")
-    for role in team_1:
-        print(f"\t{role}: {team_1[role]}")
-    print("\n\nTeam 2: ")
-    for role in team_2:
-        print(f"\t{role}: {team_2[role]}")
-
 
 def make_game(rank_nums):
     with open("players.json", 'r') as f:
