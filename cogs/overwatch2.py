@@ -6,7 +6,7 @@ from typing import Optional
 import discord
 from discord.ext import commands
 from discord import app_commands
-from RoleQueueObjects import RoleQueueSelect
+from RoleQueueObjects import RoleQueueSelect, StartButton
 import json
 import random
 
@@ -146,6 +146,7 @@ class Overwatch(commands.Cog):
             "Master": "<:Master:1109603953886380174>",
             "Grandmaster": "<:Grandmaster:1109604769963716688>",
             "Top 500": "<:Top500:1109604938297905293>",
+            "NO RANK SKILL ISSUE": "NO RANK SKILL ISSUE"
         }
         self.players = PLAYERS
 
@@ -158,7 +159,7 @@ class Overwatch(commands.Cog):
         select = RoleQueueSelect(interaction)
         view.add_item(select)
         await interaction.response.send_message(select.queue_msg, view=view)
-        i = 20
+        i = 40
         msg = await interaction.followup.send(content=".")
         while i >= 0:
             await interaction.followup.edit_message(
@@ -170,6 +171,7 @@ class Overwatch(commands.Cog):
         await interaction.followup.delete_message(msg.id)
         await interaction.delete_original_response()
         return select.queues
+
 
     @app_commands.checks.has_permissions(moderate_members=True)
     @app_commands.command(
@@ -219,11 +221,11 @@ class Overwatch(commands.Cog):
                 print(e)
                 return
             if stats['total_avg_diff'] < 0.5 and stats[
-                'tank_diff'] <= 5 and \
-                    stats['damage_diff'] <= 5 and stats[
-                'support_diff'] <= 5:
+                'tank_diff'] <= 3 and \
+                    stats['damage_diff'] <= 3 and stats[
+                'support_diff'] <= 3:
                 break
-            #  bad_teams += 1  #  likely required in timeout cases
+            # bad_teams += 1  #  likely required in timeout cases
             #  i should really make this not rely so heavily on randomness
         else:  # did not break and thus bad_teams reached limit
             await interaction.followup.send("Unable to form teams. Try again")

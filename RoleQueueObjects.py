@@ -3,6 +3,12 @@ import json
 from discord import ui, SelectOption, Interaction
 import discord
 
+class StartButton(ui.Button):
+    def __init__(self):
+        super().__init__(style=discord.ButtonStyle.primary, label="Start")
+
+
+
 class RoleQueueSelect(ui.Select):
 
     def __init__(self, view_int: Interaction):
