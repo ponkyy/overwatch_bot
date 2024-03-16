@@ -143,9 +143,6 @@ class Match:
         self.team1 = t1
         self.team2 = t2
 
-    def make_teams(self) -> bool:
-        all_matches = [m for m in ALL_MATCHES if self.team1 in m and self.team2 in m]
-
     def __str__(self) -> str:
         return f"{self.team1}\n{self.team2}"
 
