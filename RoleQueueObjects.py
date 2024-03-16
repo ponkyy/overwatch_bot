@@ -3,7 +3,7 @@ import json
 from discord import ui, SelectOption, Interaction
 import discord
 
-from cogs.overwatch2 import Role
+from new_type import Role
 
 with open("config.json", "r") as f:
     data = json.load(f)

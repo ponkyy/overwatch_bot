@@ -12,68 +12,21 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from RoleQueueObjects import RoleQueueSelect
+from new_type import *
 import json
 import random
 
-class Results(enum.Enum):
-    team_1 = 1
-    team_2 = 2
-    draw = 3
-    annul = 4
-
-class Role(enum.Enum):
-    Unselected = "None"
-    Tank = "Tank"
-    Damage = "Damage"
-    Support = "Support"
-
-class Tier(enum.Enum):
-    Bronze = "Bronze"
-    Silver = "Silver"
-    Gold = "Gold"
-    Platinum = "Platinum"
-    Diamond = "Diamond"
-    Master = "Master"
-    Grandmaster = "Grandmaster"
-    Top_500 = "Top_500"
-
-class Rank:
-    RANK_SRS = {
-        "Bronze": (0,1499),
-        "Silver": (1500, 1999),
-        "Gold": (2000, 2499),
-        "Platinum": (2500, 2999),
-        "Diamond": (3000, 3499),
-        "Master": (3500, 3999),
-        "Grandmaster": (4000, 4499),
-        "Top_500": (4500, 5000)
-    }
-
-    def __init__(self, name:str):
-        repr = name.split()
-        tier = Tier(repr[0])
-        division = int(repr[1])
-        self.Tier = tier
-        self.Division = division
-
-    
-    # todo: add support for dynamic sr
-        
-    @property
-    def sr(self) -> int:
-        range = self.RANK_SRS[self.Tier.name]
-        return math.floor(range[0] + (range[1] - range[0]) / 4 * (self.Division - 1))
 
 class Player:
 
     def __init__(self, name: str, ranks: dict[str, str]):
         self.name = name
-        self.ranks: dict[Role, Rank] ={
+        self.ranks: dict[Role, Rank] = {
             Role.Tank: Rank(ranks["tank"]),
             Role.Damage: Rank(ranks["damage"]),
             Role.Support: Rank(ranks["support"])
         }
-        self.queues: dict[Role,bool] = {
+        self.queues: dict[Role, bool] = {
             Role.Tank: False,
             Role.Damage: False,
             Role.Support: False
@@ -93,38 +46,47 @@ class Player:
         return self.name
 
 
-
-def generate_combinations(args : tuple[tuple[Player,Player],list[Player],list[Player]]):
+def generate_combinations(
+        args: tuple[tuple[Player, Player], list[Player], list[Player]]):
     # please don't ask me to explain this I don't remember how it works
     tanks, dps_players, support_players = args
     team1_tank = tanks[0]
     team2_tank = tanks[1]
     used_players = tanks
-    valid_combinations: list[tuple[list[Player],list[Player]]] = []
-    for team1_dps in combinations([p for p in dps_players if p not in used_players], 2):
+    valid_combinations: list[tuple[list[Player], list[Player]]] = []
+    for team1_dps in combinations(
+            [p for p in dps_players if p not in used_players], 2):
         used_players = tanks + team1_dps
-        for team2_dps in combinations([p for p in dps_players if p not in used_players], 2):
+        for team2_dps in combinations(
+                [p for p in dps_players if p not in used_players], 2):
             used_players = tanks + team1_dps + team2_dps
-            for team1_support in combinations([p for p in support_players if p not in used_players], 2):
+            for team1_support in combinations(
+                    [p for p in support_players if p not in used_players], 2):
                 used_players = tanks + team1_dps + team2_dps + team1_support
-                team2_support = [p for p in support_players if p not in used_players]
-                team1 = [team1_tank.as_role(Role.Tank)] + [p.as_role(Role.Damage) for p in team1_dps] + [
-                    p.as_role(Role.Support) for p in team1_support]
-                team2 = [team2_tank.as_role(Role.Tank)] + [p.as_role(Role.Damage) for p in team2_dps] + [
-                    p.as_role(Role.Support) for p in team2_support]
+                team2_support = [p for p in support_players if
+                                 p not in used_players]
+                team1 = [team1_tank.as_role(Role.Tank)] + [
+                    p.as_role(Role.Damage) for p in team1_dps] + [
+                            p.as_role(Role.Support) for p in team1_support]
+                team2 = [team2_tank.as_role(Role.Tank)] + [
+                    p.as_role(Role.Damage) for p in team2_dps] + [
+                            p.as_role(Role.Support) for p in team2_support]
                 valid_combinations.append((team1, team2))
     return valid_combinations
 
+
 def generate_team_combos(players: list[Player]):
-    valid_combinations : list[tuple[list[Player],list[Player]]] = []
+    valid_combinations: list[tuple[list[Player], list[Player]]] = []
 
     # Separate players into role-specific lists
     tank_players = [player for player in players if player.queues[Role.Tank]]
     dps_players = [player for player in players if player.queues[Role.Damage]]
-    support_players = [player for player in players if player.queues[Role.Support]]
+    support_players = [player for player in players if
+                       player.queues[Role.Support]]
 
     # Generate combinations with role constraints
-    args_list = [[tanks, support_players, dps_players] for tanks in combinations(tank_players, 2)]
+    args_list = [[tanks, support_players, dps_players] for tanks in
+                 combinations(tank_players, 2)]
     start = time.time()
     with Pool(12) as p:
         results = p.map(generate_combinations, args_list)
@@ -147,20 +109,35 @@ class Match:
         return f"{self.team1}\n{self.team2}"
 
     def get_avgs(self) -> dict:
-        team1 = {player: player.ranks[player.role] for player in self.team1} 
-        team2 = {player: player.ranks[player.role] for player in self.team2} 
-        
+        team1 = {player: player.ranks[player.role] for player in self.team1}
+        team2 = {player: player.ranks[player.role] for player in self.team2}
+
         stats = {}
 
-        stats['total_avg_diff'] = math.dist([player.ranks[player.role].sr for player in team1], [player.ranks[player.role].sr for player in team2])
+        stats['total_avg_diff'] = math.dist(
+            [player.ranks[player.role].sr for player in team1],
+            [player.ranks[player.role].sr for player in team2])
 
-        stats['tank_diff'] = math.dist([player.ranks[Role.Tank].sr for player in team1 if player.role == Role.Tank], [player.ranks[Role.Tank].sr for player in team2 if player.role == Role.Tank])
+        stats['tank_diff'] = math.dist(
+            [player.ranks[Role.Tank].sr for player in team1 if
+             player.role == Role.Tank],
+            [player.ranks[Role.Tank].sr for player in team2 if
+             player.role == Role.Tank])
 
-        stats['damage_diff'] = math.dist([player.ranks[Role.Damage].sr for player in team1 if player.role == Role.Damage], [player.ranks[Role.Damage].sr for player in team2 if player.role == Role.Damage])
+        stats['damage_diff'] = math.dist(
+            [player.ranks[Role.Damage].sr for player in team1 if
+             player.role == Role.Damage],
+            [player.ranks[Role.Damage].sr for player in team2 if
+             player.role == Role.Damage])
 
-        stats['support_diff'] = math.dist([player.ranks[Role.Support].sr for player in team1 if player.role == Role.Support], [player.ranks[Role.Support].sr for player in team2 if player.role == Role.Support])
+        stats['support_diff'] = math.dist(
+            [player.ranks[Role.Support].sr for player in team1 if
+             player.role == Role.Support],
+            [player.ranks[Role.Support].sr for player in team2 if
+             player.role == Role.Support])
 
         return stats
+
 
 with open("config.json", "r") as f:
     data = json.load(f)
@@ -171,8 +148,8 @@ with open("players.json", "r") as f:
     PLAYER_DATA: dict[str, dict[str, str]] = json.load(f)
     Players = [Player(name, data) for name, data in PLAYER_DATA.items()]
 
-
 PlayerChoices = enum.Enum("PlayerChoices", list(PLAYER_DATA.keys()))
+
 
 class Overwatch(commands.Cog):
 
@@ -195,7 +172,8 @@ class Overwatch(commands.Cog):
     def _get_emoji(self, name, role) -> str:
         return self.role_emojis[self.players[name][role.lower()][:-2]]
 
-    async def role_queue(self, interaction: discord.Interaction, timeout: int) -> dict[str, list[Role]]:
+    async def role_queue(self, interaction: discord.Interaction,
+                         timeout: int) -> dict[str, list[Role]]:
         view = discord.ui.View()
         select = RoleQueueSelect(interaction)
         view.add_item(select)
@@ -236,23 +214,29 @@ class Overwatch(commands.Cog):
             await interaction.followup.send(
                 f"Not enough players queued: **{len(queues)} queued**")
             return
-        
-        self.players = [player for player in Players if player.name in queues.keys()]
+
+        self.players = [player for player in Players if
+                        player.name in queues.keys()]
         for player in self.players:
             player.set_queues(queues[player.name])
         possible_matches = generate_team_combos(self.players)
         random.shuffle(possible_matches)
 
-        match : Match = None
-        while(match is None):
+        _match: Optional[Match] = None
+        while _match is None:
             current_teams = possible_matches.pop()
             current_match = Match(current_teams[0], current_teams[1])
             stats = current_match.get_avgs()
-            if stats['total_avg_diff'] < 500 and stats['tank_diff'] < 500 and stats['damage_diff'] < 500 and stats['support_diff'] < 500:
-                match = current_match
+            if stats['total_avg_diff'] < 500 and stats['tank_diff'] < 500 and \
+                    stats['damage_diff'] < 500 and stats['support_diff'] < 500:
+                _match = current_match
 
-        team_1 = "\n\t\t".join([f"__{player.name}__: {player.role} {self._get_emoji(player.name,player.role)}" for player in match.team1])
-        team_2 = "\n\t\t".join([f"__{player.name}__: {player.role} {self._get_emoji(player.name,player.role)}" for player in match.team2])
+        team_1 = "\n\t\t".join([
+            f"__{player.name}__: {player.role} {self._get_emoji(player.name, player.role)}"
+            for player in _match.team1])
+        team_2 = "\n\t\t".join([
+            f"__{player.name}__: {player.role} {self._get_emoji(player.name, player.role)}"
+            for player in _match.team2])
 
         msg = f"**__Match Average__: N/A**\n\n" \
               f"**Team 1:**\n\t\t{team_1}\n" \
