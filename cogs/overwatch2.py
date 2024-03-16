@@ -254,7 +254,8 @@ class Overwatch(commands.Cog):
         description="Shows ranks of all players"
     )
     async def show_ranks(self, interaction: discord.Interaction):
-
+        with open("players.json", "r") as f:
+            self.players = json.load(f)
         data = []
         for player in self.players:
             e1 = self._get_emoji(player, "tank")
