@@ -52,5 +52,5 @@ class Rank:
     def sr(self) -> int:
         range = self.RANK_SRS[self.Tier.name]
         return math.floor(
-            range[0] + (range[1] - range[0]) / 4 * (self.Division - 1))
+            range[0] + (range[1] - range[0]) / 4 * ( 5- self.Division))
 

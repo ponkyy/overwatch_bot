@@ -5,6 +5,7 @@ import discord
 
 from new_type import Role
 
+
 with open("config.json", "r") as f:
     data = json.load(f)
     ID_TO_PLAYER = data["ID_TO_PLAYER"]
@@ -26,7 +27,7 @@ class RoleQueueSelect(ui.Select):
         self.queues = {'ProteinCake': [Role.Tank, Role.Damage, Role.Support],
                        'ponky': [Role.Tank, Role.Damage, Role.Support],
                        'BinkPlayz': [Role.Tank, Role.Damage, Role.Support],
-                       'trk2': [Role.Tank, Role.Damage, Role.Support],
+                       'trk20': [Role.Tank, Role.Damage, Role.Support],
                        'JCadoo': [Role.Tank, Role.Damage, Role.Support],
                        'FlapJacks': [Role.Tank, Role.Damage, Role.Support],
                        'Rowley': [Role.Tank, Role.Damage, Role.Support],
