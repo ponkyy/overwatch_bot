@@ -45,60 +45,6 @@ class Player:
     def __repr__(self) -> str:
         return f"{self.name}: {self.role.name}"
 
-
-def generate_combinations(
-        args: tuple[tuple[Player, Player], list[Player], list[Player]]):
-    # please don't ask me to explain this I don't remember how it works
-    tanks, dps_players, support_players = args
-    team1_tank = tanks[0]
-    team2_tank = tanks[1]
-    used_players = tanks
-    valid_combinations: list[tuple[list[Player], list[Player]]] = []
-    for team1_dps in combinations(
-            [p for p in dps_players if p not in used_players], 2):
-        used_players = tanks + team1_dps
-        for team2_dps in combinations(
-                [p for p in dps_players if p not in used_players], 2):
-            used_players = tanks + team1_dps + team2_dps
-            for team1_support in combinations(
-                    [p for p in support_players if p not in used_players], 2):
-                used_players = tanks + team1_dps + team2_dps + team1_support
-                team2_support = [p for p in support_players if
-                                 p not in used_players]
-                team1 = [team1_tank.as_role(Role.Tank)] + [
-                    p.as_role(Role.Damage) for p in team1_dps] + [
-                            p.as_role(Role.Support) for p in team1_support]
-                team2 = [team2_tank.as_role(Role.Tank)] + [
-                    p.as_role(Role.Damage) for p in team2_dps] + [
-                            p.as_role(Role.Support) for p in team2_support]
-                valid_combinations.append((team1, team2))
-    return valid_combinations
-
-
-def generate_team_combos(players: list[Player]):
-    valid_combinations: list[tuple[list[Player], list[Player]]] = []
-
-    # Separate players into role-specific lists
-    tank_players = [player for player in players if player.queues[Role.Tank]]
-    dps_players = [player for player in players if player.queues[Role.Damage]]
-    support_players = [player for player in players if player.queues[Role.Support]]
-    tank_combinations = [t for t in combinations(tank_players, 2)]
-    random.shuffle(tank_combinations)
-    # Generate combinations with role constraints
-    args_list = [[tanks, support_players, dps_players] for tanks in tank_combinations]
-    start = time.time()
-
-    # Create a multiprocessing pool
-    with multiprocessing.Pool() as pool:
-        results = pool.imap_unordered(generate_combinations, args_list)
-        for result in results:
-            valid_combinations.extend(result)
-
-    print(f"Generation took {(time.time() - start)}s")
-
-    return valid_combinations
-
-
 class Match:
 
     def __init__(self, t1: list[Player], t2: list[Player]):
@@ -137,6 +83,58 @@ class Match:
              player.role == Role.Support])/2
 
         return stats
+
+def generate_combinations(
+        args: tuple[tuple[Player, Player], list[Player], list[Player]]) -> list[Match]:
+    # please don't ask me to explain this I don't remember how it works
+    tanks, dps_players, support_players = args
+    team1_tank = tanks[0]
+    team2_tank = tanks[1]
+    used_players = tanks
+    valid_combinations: list[Match] = []
+    for team1_dps in combinations(
+            [p for p in dps_players if p not in used_players], 2):
+        used_players = tanks + team1_dps
+        for team2_dps in combinations(
+                [p for p in dps_players if p not in used_players], 2):
+            used_players = tanks + team1_dps + team2_dps
+            for team1_support in combinations(
+                    [p for p in support_players if p not in used_players], 2):
+                used_players = tanks + team1_dps + team2_dps + team1_support
+                team2_support = [p for p in support_players if
+                                 p not in used_players]
+                team1 = [team1_tank.as_role(Role.Tank)] + [
+                    p.as_role(Role.Damage) for p in team1_dps] + [
+                            p.as_role(Role.Support) for p in team1_support]
+                team2 = [team2_tank.as_role(Role.Tank)] + [
+                    p.as_role(Role.Damage) for p in team2_dps] + [
+                            p.as_role(Role.Support) for p in team2_support]
+                valid_combinations.append(Match(team1, team2))
+    return valid_combinations
+
+
+def generate_team_combos(players: list[Player]):
+    valid_combinations: list[Match] = []
+
+    # Separate players into role-specific lists
+    tank_players = [player for player in players if player.queues[Role.Tank]]
+    dps_players = [player for player in players if player.queues[Role.Damage]]
+    support_players = [player for player in players if player.queues[Role.Support]]
+    tank_combinations = [t for t in combinations(tank_players, 2)]
+    random.shuffle(tank_combinations)
+    # Generate combinations with role constraints
+    args_list = [[tanks, support_players, dps_players] for tanks in tank_combinations]
+    start = time.time()
+
+    # Create a multiprocessing pool
+    with multiprocessing.Pool() as pool:
+        results = pool.imap_unordered(generate_combinations, args_list)
+        for result in results:
+            valid_combinations.extend(result)
+
+    print(f"Generation took {(time.time() - start)}s")
+
+    return valid_combinations
 
 
 with open("config.json", "r") as f:
@@ -221,21 +219,22 @@ class Overwatch(commands.Cog):
             player.set_queues(queues[player.name])
         possible_matches = generate_team_combos(self.players)
 
-        _match: Optional[Match] = None
-        while _match is None:
-            current_teams = possible_matches.pop()
-            current_match = Match(current_teams[0], current_teams[1])
-            stats = current_match.get_avgs()
-            if stats['total_avg_diff'] < 500 and stats['tank_diff'] < 500 and \
-                    stats['damage_diff'] < 500 and stats['support_diff'] < 500:
-                _match = current_match
+        good_matches: list[Match] = []
+        while len(possible_matches) > 0:
+            current_match = possible_matches.pop()
+            _stats = current_match.get_avgs()
+            if _stats['total_avg_diff'] < 280 and _stats['tank_diff'] < 280 and \
+                    _stats['damage_diff'] < 500 and _stats['support_diff'] < 500:
+                good_matches.append(current_match)
 
+        chosen_match = random.choice(good_matches)
+        stats = chosen_match.get_avgs()
         team_1 = "\n\t\t".join([
             f"__{player.name}__: {player.role} {self._get_emoji(player.name, player.role)}"
-            for player in _match.team1])
+            for player in chosen_match.team1])
         team_2 = "\n\t\t".join([
             f"__{player.name}__: {player.role} {self._get_emoji(player.name, player.role)}"
-            for player in _match.team2])
+            for player in chosen_match.team2])
 
         msg = f"**__Match Average__: N/A**\n\n" \
               f"**Team 1:**\n\t\t{team_1}\n" \
