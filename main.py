@@ -1,3 +1,4 @@
+from multiprocessing import freeze_support
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -42,10 +43,11 @@ class Client(commands.Bot):
         
         await interaction.response.send_message("Execution stopped (not implemented)", ephemeral=True)'''
 
-
-with open("config.json", "r") as f:
-    data = json.load(f)
-    TOKEN = data["TOKEN"]
-    FLAPJACK = data["FLAPJACK"]
-client = Client()
-client.run(TOKEN)
+if __name__ == '__main__':
+    freeze_support() 
+    with open("config.json", "r") as f:
+        data = json.load(f)
+        TOKEN = data["TOKEN"]
+        FLAPJACK = data["FLAPJACK"]
+    client = Client()
+    client.run(TOKEN)
