@@ -24,16 +24,7 @@ class RoleQueueSelect(ui.Select):
             ])
         self.view_int = view_int
         # self.queues : dict[str, list[Role]] = {}
-        self.queues = {'ProteinCake': [Role.Tank, Role.Damage, Role.Support],
-                       'ponky': [Role.Tank, Role.Damage, Role.Support],
-                       'BinkPlayz': [Role.Tank, Role.Damage, Role.Support],
-                       'trk20': [Role.Tank, Role.Damage, Role.Support],
-                       'JCadoo': [Role.Tank, Role.Damage, Role.Support],
-                       'FlapJacks': [Role.Tank, Role.Damage, Role.Support],
-                       'Rowley': [Role.Tank, Role.Damage, Role.Support],
-                       'DirectVortex': [Role.Tank, Role.Damage, Role.Support],
-                       'JulianDotCom': [Role.Tank, Role.Damage, Role.Support],
-                       'twinaces': [Role.Tank, Role.Damage, Role.Support]}
+        self.queues = {}
 
     async def callback(self, interaction: Interaction):
         user = interaction.user

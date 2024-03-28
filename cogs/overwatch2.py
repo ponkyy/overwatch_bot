@@ -59,7 +59,6 @@ class Match:
         team2 = {player: player.ranks[player.role] for player in self.team2}
 
         stats = {}
-
         stats['total_avg_diff'] = math.dist(
             [player.ranks[player.role].sr for player in team1],
             [player.ranks[player.role].sr for player in team2])/5
@@ -83,6 +82,8 @@ class Match:
              player.role == Role.Support])/2
 
         return stats
+    def __repr__(self) -> str:
+        return f"\n{[(player.name, player.role.name) for player in self.team1]} vs {[(player.name, player.role.name) for player in self.team2]}\n"
 
 def generate_combinations(
         args: tuple[tuple[Player, Player], list[Player], list[Player]]) -> list[Match]:
@@ -93,23 +94,20 @@ def generate_combinations(
     used_players = tanks
     valid_combinations: list[Match] = []
     for team1_dps in combinations(
-            [p for p in dps_players if p not in used_players], 2):
-        used_players = tanks + team1_dps
+        [p for p in dps_players if p not in used_players], 2):
+        used_players = tanks + tuple(team1_dps)
         for team2_dps in combinations(
-                [p for p in dps_players if p not in used_players], 2):
-            used_players = tanks + team1_dps + team2_dps
-            for team1_support in combinations(
-                    [p for p in support_players if p not in used_players], 2):
-                used_players = tanks + team1_dps + team2_dps + team1_support
-                team2_support = [p for p in support_players if
-                                 p not in used_players]
-                team1 = [team1_tank.as_role(Role.Tank)] + [
+            [p for p in dps_players if p not in used_players], 2):
+            used_players = tanks + tuple(team1_dps) + tuple(team2_dps)
+            for team1_support in combinations([p for p in support_players if p not in used_players], 2):
+                for team2_support in combinations([p for p in support_players if p not in used_players + tuple(team1_support)], 2):
+                    team1 = [team1_tank.as_role(Role.Tank)] + [
                     p.as_role(Role.Damage) for p in team1_dps] + [
-                            p.as_role(Role.Support) for p in team1_support]
-                team2 = [team2_tank.as_role(Role.Tank)] + [
+                    p.as_role(Role.Support) for p in team1_support]
+                    team2 = [team2_tank.as_role(Role.Tank)] + [
                     p.as_role(Role.Damage) for p in team2_dps] + [
-                            p.as_role(Role.Support) for p in team2_support]
-                valid_combinations.append(Match(team1, team2))
+                    p.as_role(Role.Support) for p in team2_support]
+                    valid_combinations.append(Match(team1, team2))
     return valid_combinations
 
 
@@ -156,19 +154,19 @@ class Overwatch(commands.Cog):
         self.active = False
         self.queues = {}
         self.role_emojis = {
-            "Bronze": "<:Bronze:1109603963424215060>",
-            "Silver": "<:Silver:1109603962128171128>",
-            "Gold": "<:Gold:1109603960333013083>",
-            "Platinum": "<:Platinum:1109603959137644695>",
-            "Diamond": "<:Diamond:1109604516757770281>",
-            "Master": "<:Master:1109603953886380174>",
-            "Grandmaster": "<:Grandmaster:1109604769963716688>",
-            "Top 500": "<:Top500:1109604938297905293>",
+            Tier.Bronze: "<:Bronze:1109603963424215060>",
+            Tier.Silver: "<:Silver:1109603962128171128>",
+            Tier.Gold: "<:Gold:1109603960333013083>",
+            Tier.Platinum: "<:Platinum:1109603959137644695>",
+            Tier.Diamond: "<:Diamond:1109604516757770281>",
+            Tier.Master: "<:Master:1109603953886380174>",
+            Tier.Grandmaster: "<:Grandmaster:1109604769963716688>",
+            Tier.Top_500: "<:Top500:1109604938297905293>",
         }
         self.players: list[Player] = []
 
-    def _get_emoji(self, name, role) -> str:
-        return self.role_emojis[self.players[name][role.lower()][:-2]]
+    def _get_emoji(self, player : Player, role:Role) -> str:
+        return self.role_emojis[player.ranks[role].Tier]
 
     async def role_queue(self, interaction: discord.Interaction,
                          timeout: int) -> dict[str, list[Role]]:
@@ -230,10 +228,10 @@ class Overwatch(commands.Cog):
         chosen_match = random.choice(good_matches)
         stats = chosen_match.get_avgs()
         team_1 = "\n\t\t".join([
-            f"__{player.name}__: {player.role} {self._get_emoji(player.name, player.role)}"
+            f"__{player.name}__: {player.role} {self._get_emoji(player, player.role)}"
             for player in chosen_match.team1])
         team_2 = "\n\t\t".join([
-            f"__{player.name}__: {player.role} {self._get_emoji(player.name, player.role)}"
+            f"__{player.name}__: {player.role} {self._get_emoji(player, player.role)}"
             for player in chosen_match.team2])
 
         msg = f"**__Match Average__: N/A**\n\n" \
@@ -255,10 +253,10 @@ class Overwatch(commands.Cog):
         with open("players.json", "r") as f:
             self.players = json.load(f)
         data = []
-        for player in self.players:
-            e1 = self._get_emoji(player, "tank")
-            e2 = self._get_emoji(player, "damage")
-            e3 = self._get_emoji(player, "support")
+        for player in Players:
+            e1 = self._get_emoji(player, Role.Tank)
+            e2 = self._get_emoji(player,Role.Damage)
+            e3 = self._get_emoji(player, Role.Support)
             data.append(f"**{player}**\n\tT - {e1} D - {e2} S - {e3}")
         data = "\n".join(data)
         await interaction.response.send_message(data, ephemeral=True)
